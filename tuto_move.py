@@ -10,7 +10,7 @@ def main():
     myNode= Node('move_node') # Create a Node, with a name     
 
     # Initialize a publisher:
-    velocity_publisher = myNode.create_publisher(Twist, '/multi/cmd_nav', 10)
+    velocity_publisher = myNode.create_publisher(Twist, '/cmd_vel', 10)
 
 
     # Start the ros infinit loop with myNode.
@@ -24,13 +24,13 @@ def main():
         velo.angular.z = 0.5 # radians per second
         velocity_publisher.publish(velo)    
 
-    # At the end, destroy the node explicitly.
-    move.destroy_node()
+    # # At the end, destroy the node explicitly.
+    # myNode.destroy_node()
 
-    # and shut the light down.
-    rclpy.shutdown()
+    # # and shut the light down.
+    # rclpy.shutdown()
 
-    print("tuto_move :: STOP.")
+    # print("tuto_move :: STOP.")
 
 
 
