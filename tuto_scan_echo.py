@@ -13,10 +13,10 @@ def scan_callback(scanMsg):
     obstacles = ranges_to_positions(scanMsg)
     sample = [ [ round(p[0], 2), round(p[1], 2), round(p[2], 2) ] for p in  obstacles[10:20] ]
 
+    rosNode.get_logger().info( f"\nheader:\n{scanMsg.header}\nnumber of ranges: {len(scanMsg.ranges)}\nSample: {sample}\n" )
 
     # Publish a msg
-    pointCloud = sensor_msgs_py.point_cloud2.create_cloud_xyz32(Header(frame_id='frame'), obstacles)
-    rosNode.get_logger().info( f"\nheader:\n{scanMsg.header}\nnumber of ranges: {len(scanMsg.ranges)}\nSample: {pointCloud}\n" )
+    pointCloud = sensor_msgs_py.point_cloud2.create_cloud_xyz32(Header(frame_id=scanMsg.header.frame_id), obstacles)
     point_publisher.publish(pointCloud)    
 
 
