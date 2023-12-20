@@ -32,7 +32,9 @@ install(DIRECTORY
 )
 
 # Python scripts
-install( DIRECTORY 
-  scripts
+install( PROGRAMS 
+  scripts/myNode
+  scripts/tuto_move
+  scripts/tuto_scan_echo
   DESTINATION lib/${PROJECT_NAME}
 )
