@@ -1,3 +1,5 @@
-# larm
+# group Astro, repository for the UV LARM
 
-robot kobuki ros
+## Authors :
+Inès El Hadri
+Lucas Naury
