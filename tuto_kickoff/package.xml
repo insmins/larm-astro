@@ -4,14 +4,19 @@
   <name>tuto_kickoff</name>
   <version>0.0.0</version>
   <description>Package du tuto</description>
-  <maintainer email="lucas.naury@todo.todo">lucas.naury</maintainer>
-  <maintainer email="ines.el/hadri@todo.todo">ines.el.hadri</maintainer>
+  <maintainer email="lucas.naury@etu.imt-nord-europe.fr">lucas.naury</maintainer>
+  <maintainer email="ines.el.hadri@etu.imt-nord-europe.fr">ines.el.hadri</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
+
+  <!--Dependencies-->
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>
