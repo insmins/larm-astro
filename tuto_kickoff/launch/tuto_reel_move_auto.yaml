@@ -8,3 +8,7 @@ launch:
     exec: "tuto_move"
     name: "tuto_move"
     namespace: "tuto_kickoff"
+    remap:
+    -
+        from: '/cmd_vel'
+        to: '/multi/cmd_nav'

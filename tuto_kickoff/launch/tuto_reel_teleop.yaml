@@ -10,4 +10,4 @@ launch:
 #     namespace: "teleop"
 
 - executable:
-    cmd: gnome-terminal --tab -e 'ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args --remap turtle1/cmd_vel:=/cmd_vel'
+    cmd: gnome-terminal --tab -e 'ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args --remap turtle1/cmd_vel:=/multi/cmd_nav'

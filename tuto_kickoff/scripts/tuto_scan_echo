@@ -1,4 +1,4 @@
-#!python3
+#!/usr/bin/python3
 import rclpy
 import math
 from rclpy.node import Node
