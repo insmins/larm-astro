@@ -1,0 +1,11 @@
+launch:
+
+- include:
+    file: "$(find-pkg-share tbot_node)/launch/minimal_launch.yaml"
+
+
+- node:
+    pkg: "rviz2"
+    exec: "rviz2"
+    name: "rviz2"
+    namespace: "rviz2"

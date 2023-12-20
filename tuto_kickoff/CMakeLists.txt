@@ -32,4 +32,7 @@ install(DIRECTORY
 )
 
 # Python scripts
-install( PROGRAMS scripts/myNode.py DESTINATION lib/${PROJECT_NAME})
+install( DIRECTORY 
+  scripts
+  DESTINATION lib/${PROJECT_NAME}
+)

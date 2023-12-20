@@ -1,0 +1,10 @@
+launch:
+
+- include:
+    file: "$(find-pkg-share tuto_kickoff)/launch/include/tuto_reel.yaml"
+
+- node:
+    pkg: "tuto_kickoff"
+    exec: "tuto_move"
+    name: "tuto_move"
+    namespace: "tuto_kickoff"
