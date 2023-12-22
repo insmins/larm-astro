@@ -4,6 +4,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import PointCloud2
 from geometry_msgs.msg import Twist
 import sensor_msgs_py.point_cloud2
+import time
 
 class ReactiveMove(Node):
     
@@ -16,9 +17,15 @@ class ReactiveMove(Node):
         # Initialize a publisher
         self._velocity_publisher = self.create_publisher(Twist, 'cmd_vel', 10)
 
+        # Clock for the publisher
+        self.create_timer(2, self.publish_velo)
+
 
 
     def scan_callback(self, scanMsg):
+        """
+        Save calculated velocity in _velocity
+        """
         points = sensor_msgs_py.point_cloud2.read_points(scanMsg)
 
         x, y = firstPointInFront(points, 0.5, 0.25)
@@ -34,11 +41,28 @@ class ReactiveMove(Node):
         else:  # If there's not point in front, go straight
             velocity.linear.x = 0.2 
 
-        self._velocity_publisher.publish(velocity)
+        self._velocity = velocity
+        self._previousScanTime = time.time()
         
         
+    def publish_velo(self):
+        """ 
+        Publish velocity independently of the callback
+        """
+
+        # Only move if we received scan data since less than a second
+        if(time.time() - self._previousScanTime < 1):  
+            self._velocity_publisher.publish(self._velocity) # Move according to previously calculated velocity
+        else:
+            self._velocity_publisher.publish(Twist()) # Stop movement
+
+
+
 
 def firstPointInFront(points:list, maxX, maxY):
+    """
+    Check if points in front of the robot (in the rectangle with forward distance maxX and lateral distance of 2*maxY)
+    """
     for (x,y,_) in points:
         if(x>0 and x < maxX and abs(y) < maxY):
             return (x,y)
