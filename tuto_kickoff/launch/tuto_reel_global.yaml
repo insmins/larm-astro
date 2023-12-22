@@ -5,9 +5,5 @@ launch:
 
 - node:
     pkg: "tuto_kickoff"
-    exec: "tuto_move"
-    name: "tuto_move"
-    remap:
-    -
-        from: '/cmd_vel'
-        to: '/multi/cmd_nav'
+    exec: "tuto_scan_echo"
+    name: "tuto_scan_echo"

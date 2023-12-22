@@ -7,7 +7,6 @@ launch:
 #     pkg: "teleop_twist_keyboard"
 #     exec: "teleop_twist_keyboard"
 #     name: "teleop"
-#     namespace: "teleop"
 
 - executable:
     cmd: gnome-terminal --tab -e 'ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args --remap turtle1/cmd_vel:=/cmd_vel'
