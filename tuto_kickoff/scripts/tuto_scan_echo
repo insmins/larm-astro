@@ -48,5 +48,5 @@ while True :
 
 
 
-scanInterpret.destroy_node()
+rosNode.destroy_node()
 rclpy.shutdown()
