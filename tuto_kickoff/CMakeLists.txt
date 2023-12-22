@@ -36,5 +36,6 @@ install( PROGRAMS
   scripts/myNode
   scripts/tuto_move
   scripts/tuto_scan_echo
+  scripts/reactive_move
   DESTINATION lib/${PROJECT_NAME}
 )
