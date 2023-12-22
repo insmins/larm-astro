@@ -1,36 +1,42 @@
 #!/usr/bin/python3
 import rclpy
-import math
 from rclpy.node import Node
 from sensor_msgs.msg import PointCloud2
 from geometry_msgs.msg import Twist
 import sensor_msgs_py.point_cloud2
-from std_msgs.msg import Header
 
-rosNode= None
-velocity_publisher = None
-
-def scan_callback(scanMsg):
-    global rosNode
-    global velocity_publisher
-    points = sensor_msgs_py.point_cloud2.read_points(scanMsg)
-
-    x, y = firstPointInFront(points, 0.5, 0.25)
-
-    velocity = Twist()
+class ReactiveMove(Node):
     
-    if x and y:
-        if y >= 0:  # Point is in the left part of the rectangle -> Turn right
-            velocity.angular.z = -1.0  
-        else:  # Point is in the right part of the rectangle -> Turn left
-            velocity.angular.z = 1.0
-    
-    else:  # If there's not point in front, go straight
-        velocity.linear.x = 0.2 
+    def __init__(self, name="reactive_move"):
+        super().__init__(name) # Create the node
 
-    velocity_publisher.publish(velocity)    
-    
-    
+        # Initialize a subscriber
+        self.create_subscription(PointCloud2, 'scan_points', self.scan_callback, 10)
+
+        # Initialize a publisher
+        self._velocity_publisher = self.create_publisher(Twist, 'cmd_vel', 10)
+
+
+
+    def scan_callback(self, scanMsg):
+        points = sensor_msgs_py.point_cloud2.read_points(scanMsg)
+
+        x, y = firstPointInFront(points, 0.5, 0.25)
+
+        velocity = Twist()
+        
+        if x and y:
+            if y >= 0:  # Point is in the left part of the rectangle -> Turn right
+                velocity.angular.z = -1.0  
+            else:  # Point is in the right part of the rectangle -> Turn left
+                velocity.angular.z = 1.0
+        
+        else:  # If there's not point in front, go straight
+            velocity.linear.x = 0.2 
+
+        self._velocity_publisher.publish(velocity)
+        
+        
 
 def firstPointInFront(points:list, maxX, maxY):
     for (x,y,_) in points:
@@ -42,20 +48,12 @@ def firstPointInFront(points:list, maxX, maxY):
 
 
 def main():
-    global velocity_publisher
-
     rclpy.init()
-    rosNode= Node('reactive_move')
-    # Initialize a subscriber:
-    rosNode.create_subscription( PointCloud2, 'scan_points', scan_callback, 10)
-    # Initialize a publisher:
-    velocity_publisher = rosNode.create_publisher(Twist, '/cmd_vel', 10)
-
-    while True :
-        rclpy.spin_once( rosNode )
+    rosNode = ReactiveMove()
+    rclpy.spin(rosNode)
 
 
-    scanInterpret.destroy_node()
+    rosNode.destroy_node()
     rclpy.shutdown()
 
 if __name__ == "__main__":
