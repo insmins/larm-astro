@@ -5,6 +5,7 @@ from sensor_msgs.msg import Image
 import pyrealsense2 as rs
 import signal, time, numpy as np
 import sys, cv2
+from cv_bridge import CvBridge
 
 
 class CameraDriver(Node):
@@ -17,7 +18,7 @@ class CameraDriver(Node):
         self._depth_publisher = self.create_publisher(Image, 'depth_cam', 10)
 
         # Initialize a clock for the publisher
-        self.create_timer(timerFreq, self.publish_velo)
+        self.create_timer(timerFreq, self.publish_imgs)
 
 
         # ------------------------------ Initialize camera ------------------------------ #
@@ -65,9 +66,16 @@ class CameraDriver(Node):
         # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
         depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
 
-        self._rgb_image = color_image
-        self._depth_image = depth_colormap
-        return color_image, depth_colormap
+        bridge=CvBridge()
+
+        self._rgb_image = bridge.cv2_to_imgmsg(color_image,"bgr8")
+        self._depth_image = bridge.cv2_to_imgmsg(depth_colormap, "bgr8")
+        self._rgb_image.header.stamp = self.get_clock().now().to_msg()
+        self._depth_image.header.stamp = self._rgb_image.header.stamp
+        self._rgb_image.header.frame_id = "image"
+        self._depth_image.header.frame_id = "depth"
+
+        return self._rgb_image, self._depth_image
 
     def publish_imgs(self):
         self.publish_rgb()
@@ -88,7 +96,7 @@ class CameraDriver(Node):
         Publish depth colormap image
         """
 
-        self._rgb_publisher.publish(self._depth_image)
+        self._depth_publisher.publish(self._depth_image)
 
         return 0
 
@@ -107,11 +115,10 @@ def main():
     signal.signal(signal.SIGINT, signalInterruption)
 
     rclpy.init()
-    rosNode = CameraDriver()
+    rosNode = CameraDriver(timerFreq=1.0/120)
     isOk = True
     while isOk:
         rosNode.read_imgs()
-        rosNode.publish_imgs()
         rclpy.spin_once(rosNode, timeout_sec=0.001)
 
 
