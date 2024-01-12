@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+"""Change Lidar message into point cloud object"""
 import rclpy
 import math
 from rclpy.node import Node
@@ -6,13 +7,16 @@ from sensor_msgs.msg import LaserScan, PointCloud2
 from sensor_msgs_py import point_cloud2
 from std_msgs.msg import Header
 
+# Create node
 rosNode= None
 
 def scan_callback(scanMsg):
+    """receive a lidar message and send a pointcloud message in topic"""
     global rosNode
     obstacles = ranges_to_positions(scanMsg)
-    sample = [ [ round(p[0], 2), round(p[1], 2), round(p[2], 2) ] for p in  obstacles[10:20] ]
 
+    # Sample for the tuto :
+    sample = [ [ round(p[0], 2), round(p[1], 2), round(p[2], 2) ] for p in  obstacles[10:20] ]
     # rosNode.get_logger().info( f"\nheader:\n{scanMsg.header}\nnumber of ranges: {len(scanMsg.ranges)}\nSample: {sample}\n" )
 
     # Publish a msg
@@ -21,6 +25,7 @@ def scan_callback(scanMsg):
 
 
 def ranges_to_positions(scan_message: LaserScan) -> list:
+    """change a lidar message into a pointcloud message"""
     obstacles= []
     angle= scan_message.angle_min
     for aDistance in scan_message.ranges :
@@ -44,8 +49,6 @@ point_publisher = rosNode.create_publisher(PointCloud2, '/scan_points', 10)
 
 while True :
     rclpy.spin_once( rosNode )
-
-
 
 
 rosNode.destroy_node()

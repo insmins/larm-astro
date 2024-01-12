@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+"""Base node, does nothing."""
+
 import rclpy                 # core ROS2 client python library
 from rclpy.node import Node  # To manipulate ROS Nodes
 
