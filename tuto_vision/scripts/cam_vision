@@ -22,9 +22,9 @@ class CameraVision(Node):
 
         # Initialize subscribers
         self.create_subscription(Image, 'cam_rgb', self.rgb_callback, 10)
-        self.create_subscription(Image, 'cam_depth', self.depth_callback, 10)
-        self.create_subscription(Image, 'cam_infra_1', self.infra1_callback, 10)
-        self.create_subscription(Image, 'cam_infra_2', self.infra2_callback, 10)
+        # self.create_subscription(Image, 'cam_depth', self.depth_callback, 10)
+        # self.create_subscription(Image, 'cam_infra_1', self.infra1_callback, 10)
+        # self.create_subscription(Image, 'cam_infra_2', self.infra2_callback, 10)
         # Initialize subcriber variables
         self._rgb_img = None
         self._depth_img = None
@@ -32,9 +32,9 @@ class CameraVision(Node):
         self._infra2_img = None
 
         # Initialize publishers
-        self._detection_publisher = self.create_publisher(Image, 'cam_detection', 10)
-        self._mask_publisher = self.create_publisher(Image, 'mask_detection', 10)
-        self._bottle_detected_publisher = self.create_publisher(String, 'bottle_detected', 10)
+        self._rgb_detection_publisher = self.create_publisher(Image, 'rgb_detection', 10)
+        self._mask_detection_publisher = self.create_publisher(Image, 'mask_detection', 10)
+        self._detection_publisher = self.create_publisher(String, 'detection', 10)
 
         # Initialize a clock for the publisher
         self.create_timer(timerFreq, self.loop)
@@ -45,12 +45,12 @@ class CameraVision(Node):
     # Callbacks
     def rgb_callback(self, img):
         self._rgb_img = self._bridge.imgmsg_to_cv2(img, desired_encoding='passthrough')
-    def depth_callback(self, img):
-        self._depth_img = self._bridge.imgmsg_to_cv2(img, desired_encoding='passthrough')
-    def infra1_callback(self, img):
-        self._infra1_img = self._bridge.imgmsg_to_cv2(img, desired_encoding='passthrough')
-    def infra2_callback(self, img):
-        self._infra2_img = self._bridge.imgmsg_to_cv2(img, desired_encoding='passthrough')
+    # def depth_callback(self, img):
+    #     self._depth_img = self._bridge.imgmsg_to_cv2(img, desired_encoding='passthrough')
+    # def infra1_callback(self, img):
+    #     self._infra1_img = self._bridge.imgmsg_to_cv2(img, desired_encoding='passthrough')
+    # def infra2_callback(self, img):
+    #     self._infra2_img = self._bridge.imgmsg_to_cv2(img, desired_encoding='passthrough')
 
         
     # Node internal loop
@@ -92,19 +92,19 @@ class CameraVision(Node):
                 ros2_mask_image.header.stamp = self.get_clock().now().to_msg()
                 ros2_mask_image.header.frame_id = "image"
 
-                ros2_image = cv2.cvtColor(image, cv2.COLOR_HSV2BGR)
-                ros2_image = self._bridge.cv2_to_imgmsg(ros2_image,"bgr8")
-                ros2_image.header.stamp = self.get_clock().now().to_msg()
-                ros2_image.header.frame_id = "image"
+                ros2_rgb_image = cv2.cvtColor(image, cv2.COLOR_HSV2BGR)
+                ros2_rgb_image = self._bridge.cv2_to_imgmsg(ros2_rgb_image,"bgr8")
+                ros2_rgb_image.header.stamp = self.get_clock().now().to_msg()
+                ros2_rgb_image.header.frame_id = "image"
 
 
                 # Publish String message -> to inform that we have detected a bottle
                 str = String()
                 str.data = "A bottle has been detected"
-                self._bottle_detected_publisher.publish(str)
+                self._detection_publisher.publish(str)
                 # Publish Image -> to be able to detect false positives and improve the algorithm
-                self._detection_publisher.publish(ros2_image)
-                self._mask_publisher.publish(ros2_mask_image)
+                self._rgb_detection_publisher.publish(ros2_rgb_image)
+                self._mask_detection_publisher.publish(ros2_mask_image)
 
 
 
