@@ -1,0 +1,143 @@
+#!/usr/bin/python3
+"""Basic control of the robot, move forward and avoid obstacles. Doesn't get stuck"""
+
+# imports
+import rclpy
+import math as m
+from rclpy.node import Node
+from sensor_msgs.msg import PointCloud2
+from geometry_msgs.msg import Twist
+import sensor_msgs_py.point_cloud2
+import time
+
+# main class
+class ReactiveMove(Node):
+
+    MAX_STUCK_TIME = 5 #  Time before the robot is considered to be stuck and has to make a U-turn
+
+    # Rectangle of vision of the robot
+    RECT_WIDTH = 0.5
+    RECT_LENGTH = 0.5
+
+    # Robot velocities
+    ANGULAR_VELOCITY = 1.0
+    LINEAR_VELOCITY = 0.2
+    
+    def __init__(self, name="reactive_move", timerFreq = 1/60.0):
+        """ constructor """
+        super().__init__(name) #  Create the node
+
+        # Initialize a subscriber
+        self.create_subscription(PointCloud2, 'scan_points', self.scan_callback, 10)
+
+        # Initialize a publisher
+        self._velocity_publisher = self.create_publisher(Twist, 'cmd_vel', 10)
+
+        # Initialize a clock for the publisher
+        self.create_timer(timerFreq, self.publish_velo)
+
+        # Initialize variables
+        self._timerFreq = timerFreq
+        self._previousScanTime = None
+        self._previousStraightMvtTime = None
+        self._points = []
+
+
+
+    def scan_callback(self, scanMsg):
+        """
+        Save received points for future calculations
+        """
+        self._points = sensor_msgs_py.point_cloud2.read_points(scanMsg)
+
+        self._previousScanTime = time.time()
+
+    
+    def calcul_velo(self):
+        """
+        Calculate the velocity based on the lidar detected points and other data
+        """
+
+        now = time.time()
+
+
+        # If scan data received more than 1s ago, stop the robot
+        if now - self._previousScanTime > 1: 
+            print("STOP ROBOT")
+            return Twist()  # Return a zero velocity
+        
+        # If it's been rotating for more than 5s, it's probably stuck in a corner
+        # In this case, a u-turn is performed, until >3.14s which is equivalent to a rotation of >180°
+        if self._previousStraightMvtTime and self.MAX_STUCK_TIME < now - self._previousStraightMvtTime <= self.MAX_STUCK_TIME + m.pi: 
+            velo = Twist()
+            velo.angular.z = self.ANGULAR_VELOCITY
+            print("U-TURN")
+            return velo
+
+        # Default case
+        x, y = firstPointInFront(self._points, self.RECT_LENGTH, self.RECT_WIDTH / 2.0)
+        velocity = Twist()
+        if x and y:
+            if y >= 0:  # Point is in the left part of the rectangle -> Turn right
+                velocity.angular.z = -self.ANGULAR_VELOCITY
+                print("TURN RIGHT")
+            else:  # Point is in the right part of the rectangle -> Turn left
+                velocity.angular.z = self.ANGULAR_VELOCITY
+                print("TURN LEFT")
+            
+        else:  # If there's not point in front, go straight
+            velocity.linear.x = self.LINEAR_VELOCITY
+            self._previousStraightMvtTime = now
+            print("STRAIGHT")
+
+        return velocity
+
+
+
+
+
+
+    def publish_velo(self):
+        """ 
+        Publish velocity independently of the callback
+        """
+
+        # Make sure at least one callback is made
+        if not self._previousScanTime:
+            return -1
+
+
+        velocity = self.calcul_velo()
+
+        self._velocity_publisher.publish(velocity) #  Move according to previously calculated velocity
+
+        return 0
+
+
+# Static functions
+def firstPointInFront(points:list, maxX, maxY):
+    """
+    Check if points in front of the robot (in the rectangle with forward distance maxX and lateral distance of 2*maxY)
+    """
+    for (x,y,_) in points:
+        if(x>0 and x < maxX and abs(y) < maxY):
+            return (x,y)
+    
+    return (None, None)
+
+
+# Main loop
+def main():
+    """
+    Main loop
+    """
+    rclpy.init()
+    rosNode = ReactiveMove()
+    rclpy.spin(rosNode)
+
+
+    rosNode.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == "__main__":
+    main()
