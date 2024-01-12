@@ -47,6 +47,7 @@ Before starting, please ensure you have installed the following
 
 ### Build the packages
 In the same ROS2 workspace directory:
+- `./master/bin/install`
 - `colcon build`
 - `source install/setup.sh`
 
@@ -64,7 +65,7 @@ To launch the challenge 1 in **simulation**, run the following command :
 To launch the challenge 1 on the **real turtlebot**, run the following command :
 `ros2 launch grp_astro tbot_launch.yaml`
 
-### Visualization
+### Visualization  
 In parallel, if you want to **visualize** the information that is published on the different topics, you can run
 `ros2 launch grp_astro visualize.launch.py`
 
