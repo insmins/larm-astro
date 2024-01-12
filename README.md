@@ -36,8 +36,11 @@ Before starting, please ensure you have installed the following
     * cvbridge3
     * scikit-image
 </br>
-    >Command :
-    `pip install numpy colcon-common-extensions opencv-python pyrealsense2 cvbridge3 scikit-image`
+    >Command :  
+    >`pip install numpy colcon-common-extensions opencv-python pyrealsense2 cvbridge3 scikit-image`
+
+- $`\textcolor{red}{\text{[OPTIONAL]}}`$ Gazebo (for the simulation)
+-  $`\textcolor{red}{\text{[OPTIONAL]}}`$ Teleop twist keyboard (to control manually the robot)
 
 ### Install the package
 1. Open the command prompt in the ROS2 workspace directory
