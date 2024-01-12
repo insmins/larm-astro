@@ -25,12 +25,6 @@ endif()
 
 ament_package()
 
-# Install launch files.
-install(DIRECTORY
-  launch
-  DESTINATION share/${PROJECT_NAME}/
-)
-
 # Python scripts
 install( PROGRAMS 
   scripts/cam_driver
