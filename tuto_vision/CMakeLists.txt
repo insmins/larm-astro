@@ -34,5 +34,6 @@ install(DIRECTORY
 # Python scripts
 install( PROGRAMS 
   scripts/cam_driver
+  scripts/cam_vision
   DESTINATION lib/${PROJECT_NAME}
 )
