@@ -1,0 +1,36 @@
+launch:
+
+# Include the robot startup script
+- include:
+    file: "$(find-pkg-share tbot_node)/launch/minimal_launch.yaml"
+
+# Lidar conversion to point cloud
+- node:
+    pkg: "grp_astro"
+    exec: "scan2point_cloud"
+    name: "scan2point_cloud"
+
+# Movement based on the lidar data
+- node:
+    pkg: "grp_astro"
+    exec: "reactive_move"
+    name: "reactive_move"
+    remap:
+    -
+        from: '/cmd_vel'
+        to: '/multi/cmd_nav'
+
+# Publish camera views
+- node:
+    pkg: "grp_astro"
+    exec: "cam_driver"
+    name: "cam_driver"
+
+# Publish if there is a bottle in the field of view
+- node:
+    pkg: "grp_astro"
+    exec: "cam_vision"
+    name: "cam_vision"
+
+- executable:
+    cmd: gnome-terminal --tab -e 'ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args --remap turtle1/cmd_vel:=/multi/cmd_nav'

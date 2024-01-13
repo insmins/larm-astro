@@ -1,0 +1,13 @@
+launch:
+
+# Launch rviz2
+- node:
+    pkg: "rviz2"
+    exec: "rviz2"
+    name: "rviz2"
+    args: "-d $(find-pkg-share grp_astro)/config/reel.rviz"
+
+
+# Launch a terminal that listens to the "detection" topic to print when we see a bottle in the FOV
+- executable:
+    cmd: gnome-terminal --tab -e 'ros2 topic echo "detection"'
