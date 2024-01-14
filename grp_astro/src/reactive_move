@@ -16,12 +16,15 @@ class ReactiveMove(Node):
     MAX_STUCK_TIME = 5 #  Time before the robot is considered to be stuck and has to make a U-turn
 
     # Rectangle of vision of the robot
-    RECT_WIDTH = 0.5
-    RECT_LENGTH = 0.5
+    RECT_WIDTH = 0.6
+    RECT_LENGTH = 0.8
+    # Rectangle of speeds of the robot
+    MIN_DIST_MOVE_FORWARD = 0.3
+    MAX_DIST_MOVE_FORWARD = RECT_LENGTH
 
     # Robot velocities
     ANGULAR_VELOCITY = 1.0
-    LINEAR_VELOCITY = 0.2
+    LINEAR_VELOCITY = 0.3
     
     def __init__(self, name="reactive_move", timerFreq = 1/60.0):
         """ constructor """
@@ -39,8 +42,8 @@ class ReactiveMove(Node):
         # Initialize variables
         self._timerFreq = timerFreq
         self._previousScanTime = None
-        self._previousStraightMvtTime = None
         self._points = []
+        self._firstPointSeen = None
 
 
 
@@ -63,32 +66,37 @@ class ReactiveMove(Node):
 
         # If scan data received more than 1s ago, stop the robot
         if now - self._previousScanTime > 1: 
-            print("STOP ROBOT")
+            print("No data received for more than 1s")
             return Twist()  # Return a zero velocity
         
-        # If it's been rotating for more than 5s, it's probably stuck in a corner
-        # In this case, a u-turn is performed, until >3.14s which is equivalent to a rotation of >180°
-        if self._previousStraightMvtTime and self.MAX_STUCK_TIME < now - self._previousStraightMvtTime <= self.MAX_STUCK_TIME + m.pi: 
-            velo = Twist()
-            velo.angular.z = self.ANGULAR_VELOCITY
-            print("U-TURN")
-            return velo
-
         # Default case
         x, y = firstPointInFront(self._points, self.RECT_LENGTH, self.RECT_WIDTH / 2.0)
+
+        if(not self._firstPointSeen): #If you were previously moving straight without obstacles
+            self._firstPointSeen = (x,y)
+
         velocity = Twist()
-        if x and y:
-            if y >= 0:  # Point is in the left part of the rectangle -> Turn right
+        if x and y: # If there is a point in front at the moment
+            
+            # Linear movement
+            if x < self.MIN_DIST_MOVE_FORWARD:
+                velocity.linear.x = 0.0 #If the wall is too close, don't go forward, only rotate
+            else:
+                coefficient = (x - self.MIN_DIST_MOVE_FORWARD) / (self.MAX_DIST_MOVE_FORWARD - self.MIN_DIST_MOVE_FORWARD) #linear between 0 (MIN_DIST_MOVE_FORWARD) and 1 (MAX_DIST_MOVE_FORWARD)
+                velocity.linear.x = coefficient * self.LINEAR_VELOCITY
+
+            # Rotation, based on the first point seen
+            firstY = self._firstPointSeen[1]
+            if firstY >= 0:  # Point was in the left part of the rectangle -> Continue turning right until there is no point in front
                 velocity.angular.z = -self.ANGULAR_VELOCITY
-                print("TURN RIGHT")
-            else:  # Point is in the right part of the rectangle -> Turn left
+            else:  # Point was in the right part of the rectangle -> Continue turning left until there is no point in front
                 velocity.angular.z = self.ANGULAR_VELOCITY
-                print("TURN LEFT")
+
             
         else:  # If there's not point in front, go straight
             velocity.linear.x = self.LINEAR_VELOCITY
-            self._previousStraightMvtTime = now
-            print("STRAIGHT")
+            self._firstPointSeen = None
+
 
         return velocity
 
@@ -119,11 +127,21 @@ def firstPointInFront(points:list, maxX, maxY):
     """
     Check if points in front of the robot (in the rectangle with forward distance maxX and lateral distance of 2*maxY)
     """
+    # Closest point
+    cx, cy = None, None 
+    closestDistance = 10000
+
     for (x,y,_) in points:
-        if(x>0 and x < maxX and abs(y) < maxY):
-            return (x,y)
+        pointDistance = m.sqrt(x**2 + y**2) #Get point distance to Lidar
+
+        isInRectangle = x > 0 and x < maxX and abs(y) < maxY
+        isCloser = (cx is None) or (pointDistance < closestDistance)
+
+        if(isInRectangle and isCloser): #If the point is closer, store it as the new closest point in the rectangle
+            cx,cy = x,y
+            closestDistance = pointDistance
     
-    return (None, None)
+    return (cx, cy)
 
 
 # Main loop
