@@ -12,10 +12,9 @@ class CameraVision(Node):
 
     def __init__(self, name="cam_vision", timerFreq = 1/60.0):
         super().__init__(name) # Create the node
-
         # Initialiaze node variables
-        self._low = np.array([72-25, 107-55, 84-55])
-        self._high = np.array([65+25, 219+30, 255])
+        self._low = np.array([60-25, 50, 50])
+        self._high = np.array([65+25, 255, 255])
         self._kernel = np.ones((5, 5), np.uint8)
 
         self._color_info = (0, 0, 255)
@@ -107,8 +106,8 @@ class CameraVision(Node):
             (x, y), radius = cv2.minEnclosingCircle(c)
             
             # If we find a correct match that is big enough, we publish data
-            if min(match, match2) < 0.2 and radius > 30:
-                print(f'Match : {min(match, match2)}')
+            if min(match, match2) < 0.3 and radius > 30 and y > 2.0/5 * 480:
+                # print(f'Match : {min(match, match2)}')
 
                 # Circle the bottle on the image 
                 cv2.circle(image, (int(x), int(y)), int(radius), self._color_info, 2)
