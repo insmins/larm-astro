@@ -42,6 +42,23 @@ Before starting, please ensure you have installed the following
 - $`\textcolor{red}{\text{[OPTIONAL]}}`$ Gazebo (for the simulation)
 -  $`\textcolor{red}{\text{[OPTIONAL]}}`$ Teleop twist keyboard (to control manually the robot)
 
+### Configuration
+Add the following lines to your `~/.bashrc` :
+```
+source /opt/ros/iron/setup.bash #Add ROS2 source
+export ROS_DOMAIN_ID=12 #Setup domain ID
+```
+If you want your ROS nodes to only be accessible on localhost, add :
+```
+export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST #Tell ROS to make your nodes only accessible by the same machine
+```
+However, if you want to be able to visualize data from another computer on the same network, add :
+
+```
+export ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET #Tell ROS to make your nodes only accessible by the same machine
+```
+
+
 ### Install the package
 1. Open the command prompt in the ROS2 workspace directory
 1. Clone the IMT Tbot packages : `git clone https://bitbucket.org/imt-mobisyst/pkg-tbot/src/master/`
@@ -68,7 +85,7 @@ To launch the challenge 1 in **simulation**, run the following command :
 To launch the challenge 1 on the **real turtlebot**, run the following command :
 `ros2 launch grp_astro tbot_launch.yaml`
 
-### Visualization  
+### Visualization  
 In parallel, if you want to **visualize** the information that is published on the different topics, you can run
 `ros2 launch grp_astro visualize.launch.py`
 
