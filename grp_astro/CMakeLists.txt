@@ -37,6 +37,12 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}/
 )
 
+# Copy images
+install(DIRECTORY
+  src/img
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 # Python scripts
 install( PROGRAMS 
   src/cam_driver
