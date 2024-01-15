@@ -33,4 +33,4 @@ launch:
     name: "cam_vision"
 
 - executable:
-    cmd: gnome-terminal --tab -e 'ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args --remap turtle1/cmd_vel:=/multi/cmd_nav'
+    cmd: gnome-terminal --tab -e 'ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args --remap cmd_vel:=/multi/cmd_teleop'
