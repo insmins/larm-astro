@@ -6,7 +6,7 @@ import rclpy
 import math as m
 from rclpy.node import Node
 from sensor_msgs.msg import PointCloud2
-from kobuki_ros_interfaces.msg import WheelDropEvent
+from kobuki_ros_interfaces.msg import WheelDropEvent, ButtonEvent
 from geometry_msgs.msg import Twist
 import sensor_msgs_py.point_cloud2
 import time
@@ -40,6 +40,7 @@ class ReactiveMove(Node):
         # Initialize subscribers
         self.create_subscription(PointCloud2, '/scan_points', self.scan_callback, 10)
         self.create_subscription(WheelDropEvent, '/events/wheel_drop', self.wheel_callback, 10)
+        self.create_subscription(ButtonEvent, '/events/button', self.btn_callback, 10)
 
         # Initialize a publisher
         self._velocity_publisher = self.create_publisher(Twist, 'cmd_vel', 10)
@@ -52,8 +53,10 @@ class ReactiveMove(Node):
         self._previousScanTime = None
         self._points = []
         self._firstPointSeen = None
+        ## Sécurité
         self._leftWheelDropped = False
         self._rightWheelDropped = False
+        self._canMove = True
 
 
 
@@ -74,6 +77,15 @@ class ReactiveMove(Node):
         else:
             self._rightWheelDropped = msg.state == msg.DROPPED
 
+    def btn_callback(self, msg):
+        """
+        Toggle robot movement when pressing any of the btns
+        """
+        print(msg)
+        if(msg.state == msg.PRESSED):
+            self._canMove = not self._canMove
+            print("pressed")
+
     
     def calcul_velo(self):
         """
@@ -92,6 +104,13 @@ class ReactiveMove(Node):
         if self._leftWheelDropped and self._rightWheelDropped:
             print("The robot is not on the floor")
             return Twist()  # Return a zero velocity
+        
+
+        # If stop btn was pressed
+        if not self._canMove:
+            print("The robot is stopped")
+            return Twist()  # Return a zero velocity
+
         
 
         # Default case
@@ -141,7 +160,6 @@ class ReactiveMove(Node):
 
 
         velocity = self.calcul_velo()
-        print(self.paramDouble('LINEAR_VELOCITY'))
 
         self._velocity_publisher.publish(velocity) #  Move according to previously calculated velocity
 
