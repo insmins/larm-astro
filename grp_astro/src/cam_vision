@@ -4,8 +4,9 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
 import  numpy as np
-import sys, cv2, os, pathlib
+import sys, cv2, pathlib, statistics
 from cv_bridge import CvBridge
+
 
 
 class CameraVision(Node):
@@ -21,14 +22,17 @@ class CameraVision(Node):
 
         # Initialize subscribers
         self.create_subscription(Image, 'cam_rgb', self.rgb_callback, 10)
+        self.create_subscription(Image, 'cam_depth_dist', self.depth_callback, 10)
 
         # Initialize subcriber variables
         self._rgb_img = None
+        self._depth_img = None
 
         # Initialize publishers
         self._rgb_detection_publisher = self.create_publisher(Image, 'rgb_detection', 10)
         self._mask_detection_publisher = self.create_publisher(Image, 'mask_detection', 10)
         self._detection_publisher = self.create_publisher(String, 'detection', 10)
+        #self._depth_point_publisher = self.create_publisher(String, 'depth_point', 10)
 
         # Initialize a clock for the publisher
         self.create_timer(timerFreq, self.loop)
@@ -39,6 +43,12 @@ class CameraVision(Node):
     # Callbacks
     def rgb_callback(self, img):
         self._rgb_img = self._bridge.imgmsg_to_cv2(img, desired_encoding='passthrough')
+    
+    def depth_callback(self, img):
+        width = img.dim[0].size
+        height = img.dim[1].size
+        self._depth_img = np.array(img.data).reshape((width, height))
+        
 
 
     def publish_msgs(self, image, mask):
@@ -62,10 +72,14 @@ class CameraVision(Node):
         # Publish Images -> to be able to detect false positives and improve the algorithm
         self._rgb_detection_publisher.publish(ros2_rgb_image)
         self._mask_detection_publisher.publish(ros2_mask_image)
+
+        # Depth publish
+        #self._depth_point_publisher.publish(ros2_mask_image)
         
     # Node internal loop
     def loop(self):
         if self._rgb_img is None :
+            print('a')
             return
         
         # Convert image to HSV for easier thresholding
@@ -96,6 +110,9 @@ class CameraVision(Node):
         sorted_contours = sorted(contours, key=cv2.contourArea, reverse=True)
         
 
+
+        findPt = False
+        (x, y) = 0, 0
         for c in contours:
         
             # Compare our mask with our templates
@@ -104,19 +121,45 @@ class CameraVision(Node):
 
             # Get size of object
             (x, y), radius = cv2.minEnclosingCircle(c)
-            
+
             # If we find a correct match that is big enough, we publish data
             if min(match, match2) < 0.3 and radius > 30 and y > 2.0/5 * 480:
-                # print(f'Match : {min(match, match2)}')
-
-                # Circle the bottle on the image 
-                cv2.circle(image, (int(x), int(y)), int(radius), self._color_info, 2)
-                cv2.circle(image, (int(x), int(y)), 5, self._color_info, 10)
-
-                # Publish images and string message
-                self.publish_msgs(image, mask)
+                findPt = True
 
                 break # Stop checking other contours
+
+
+        # point found
+        if findPt:
+            # Circle the bottle on the image 
+            cv2.circle(image, (int(x), int(y)), int(radius), self._color_info, 2)
+            cv2.circle(image, (int(x), int(y)), 5, self._color_info, 10)
+
+            # Publish images and string message
+            self.publish_msgs(image, mask)
+        
+        # Depth Program
+        if self._depth_img is None :
+            return
+        depth = self._depth_img
+        print(depth[int(y), int(x)])
+
+        """
+        if findPt:
+            circle_points = []
+            D_RADIUS = 10
+            for X in range(int(x)-D_RADIUS, int(x)+D_RADIUS):
+                for Y in range(int(y)-D_RADIUS, int(y)+D_RADIUS):
+                    if (X-int(x))**2 + (Y-int(y))**2 <= D_RADIUS:
+                        circle_points.append(depth[Y, X])
+            #publier moy(circle_points)
+            print(statistics.mean(circle_points))
+        """
+        
+        
+
+        
+
 
 
 
