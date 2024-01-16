@@ -28,3 +28,7 @@ launch:
 
 - executable:
     cmd: gnome-terminal --tab -e 'ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args --remap turtle1/cmd_vel:=/cmd_vel'
+
+# Launch a SLAM algorithm
+- include:
+    file: "$(find-pkg-share slam_toolbox)/launch/online_sync_launch.py"
