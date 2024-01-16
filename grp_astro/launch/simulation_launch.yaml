@@ -15,6 +15,25 @@ launch:
     pkg: "grp_astro"
     exec: "reactive_move"
     name: "reactive_move"
+    param:
+    -
+        name: 'RECT_WIDTH'
+        value: 0.5
+    -
+        name: 'RECT_LENGTH'
+        value: 0.65
+    -
+        name: 'MIN_DIST_MOVE_FORWARD'
+        value: 0.15
+    -
+        name: 'MAX_DIST_MOVE_FORWARD'
+        value: 0.4
+    -
+        name: 'ANGULAR_VELOCITY'
+        value: 0.8
+    -
+        name: 'LINEAR_VELOCITY'
+        value: 0.25
 
 # Publish if there is a bottle in the field of view
 - node:

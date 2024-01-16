@@ -14,15 +14,6 @@ import time
 # main class
 class ReactiveMove(Node):
 
-    MAX_STUCK_TIME = 5 #  Time before the robot is considered to be stuck and has to make a U-turn
-
-    # Rectangle of vision of the robot
-    RECT_WIDTH = 0.6
-    RECT_LENGTH = 0.8
-    # Rectangle of speeds of the robot
-    MIN_DIST_MOVE_FORWARD = 0.3
-    MAX_DIST_MOVE_FORWARD = RECT_LENGTH
-
     # Robot velocities
     ANGULAR_VELOCITY = 1.0
     LINEAR_VELOCITY = 0.3
@@ -30,6 +21,21 @@ class ReactiveMove(Node):
     def __init__(self, name="reactive_move", timerFreq = 1/60.0):
         """ constructor """
         super().__init__(name)  # Create the node
+
+        # Initialize parameters
+        self.declare_parameters(
+            namespace='',
+            parameters=[
+                # Rectangle of vision of the robot
+                ('RECT_WIDTH', 0.6),
+                ('RECT_LENGTH', 0.8),
+                # Rectangle of speeds of the robot
+                ('MIN_DIST_MOVE_FORWARD', 0.3),
+                ('MAX_DIST_MOVE_FORWARD', 0.8),
+                # Velocities
+                ('ANGULAR_VELOCITY', 1.0),
+                ('LINEAR_VELOCITY', 0.3)
+            ])
 
         # Initialize subscribers
         self.create_subscription(PointCloud2, '/scan_points', self.scan_callback, 10)
@@ -89,7 +95,7 @@ class ReactiveMove(Node):
         
 
         # Default case
-        x, y = firstPointInFront(self._points, self.RECT_LENGTH, self.RECT_WIDTH / 2.0)
+        x, y = firstPointInFront(self._points, self.paramDouble('RECT_LENGTH'), self.paramDouble('RECT_WIDTH') / 2.0)
 
         if(not self._firstPointSeen): #If you were previously moving straight without obstacles
             self._firstPointSeen = (x,y)
@@ -98,22 +104,22 @@ class ReactiveMove(Node):
         if x and y: # If there is a point in front at the moment
             
             # Linear movement
-            if x < self.MIN_DIST_MOVE_FORWARD:
+            if x < self.paramDouble('MIN_DIST_MOVE_FORWARD'):
                 velocity.linear.x = 0.0 #If the wall is too close, don't go forward, only rotate
             else:
-                coefficient = (x - self.MIN_DIST_MOVE_FORWARD) / (self.MAX_DIST_MOVE_FORWARD - self.MIN_DIST_MOVE_FORWARD) #linear between 0 (MIN_DIST_MOVE_FORWARD) and 1 (MAX_DIST_MOVE_FORWARD)
-                velocity.linear.x = coefficient * self.LINEAR_VELOCITY
+                coefficient = (x - self.paramDouble('MIN_DIST_MOVE_FORWARD')) / (self.paramDouble('MAX_DIST_MOVE_FORWARD') - self.paramDouble('MIN_DIST_MOVE_FORWARD')) #linear between 0 (MIN_DIST_MOVE_FORWARD) and 1 (MAX_DIST_MOVE_FORWARD)
+                velocity.linear.x = coefficient * self.paramDouble('LINEAR_VELOCITY')
 
             # Rotation, based on the first point seen
             firstY = self._firstPointSeen[1]
             if firstY >= 0:  # Point was in the left part of the rectangle -> Continue turning right until there is no point in front
-                velocity.angular.z = -self.ANGULAR_VELOCITY
+                velocity.angular.z = -self.paramDouble('ANGULAR_VELOCITY')
             else:  # Point was in the right part of the rectangle -> Continue turning left until there is no point in front
-                velocity.angular.z = self.ANGULAR_VELOCITY
+                velocity.angular.z = self.paramDouble('ANGULAR_VELOCITY')
 
             
         else:  # If there's not point in front, go straight
-            velocity.linear.x = self.LINEAR_VELOCITY
+            velocity.linear.x = self.paramDouble('LINEAR_VELOCITY')
             self._firstPointSeen = None
 
 
@@ -135,11 +141,14 @@ class ReactiveMove(Node):
 
 
         velocity = self.calcul_velo()
+        print(self.paramDouble('LINEAR_VELOCITY'))
 
         self._velocity_publisher.publish(velocity) #  Move according to previously calculated velocity
 
         return 0
 
+    def paramDouble(self, name):
+        return self.get_parameter(name).get_parameter_value().double_value
 
 # Static functions
 def firstPointInFront(points:list, maxX, maxY):
@@ -161,6 +170,7 @@ def firstPointInFront(points:list, maxX, maxY):
             closestDistance = pointDistance
     
     return (cx, cy)
+
 
 
 # Main loop
