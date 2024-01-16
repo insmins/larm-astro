@@ -13,10 +13,6 @@ import time
 
 # main class
 class ReactiveMove(Node):
-
-    # Robot velocities
-    ANGULAR_VELOCITY = 1.0
-    LINEAR_VELOCITY = 0.3
     
     def __init__(self, name="reactive_move", timerFreq = 1/60.0):
         """ constructor """
