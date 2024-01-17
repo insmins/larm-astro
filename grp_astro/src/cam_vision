@@ -2,7 +2,7 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
-from std_msgs.msg import String
+from std_msgs.msg import String, Float32MultiArray
 import  numpy as np
 import sys, cv2, pathlib, statistics
 from cv_bridge import CvBridge
@@ -22,7 +22,7 @@ class CameraVision(Node):
 
         # Initialize subscribers
         self.create_subscription(Image, 'cam_rgb', self.rgb_callback, 10)
-        self.create_subscription(Image, 'cam_depth_dist', self.depth_callback, 10)
+        self.create_subscription(Float32MultiArray, 'cam_depth_dist', self.depth_callback, 10)
 
         # Initialize subcriber variables
         self._rgb_img = None
@@ -42,6 +42,7 @@ class CameraVision(Node):
 
     # Callbacks
     def rgb_callback(self, img):
+        print('coucou')
         self._rgb_img = self._bridge.imgmsg_to_cv2(img, desired_encoding='passthrough')
     
     def depth_callback(self, img):
