@@ -4,30 +4,31 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 from std_msgs.msg import String, Float32MultiArray
 import  numpy as np
-import sys, cv2, pathlib, statistics
+import cv2, pathlib, statistics
 from cv_bridge import CvBridge
+from cam_driver import CameraDriver
+import pyrealsense2 as rs
+import math
 
 
 
-class CameraVision(Node):
+class CameraVision(CameraDriver):
+    
 
     def __init__(self, name="cam_vision", timerFreq = 1/60.0):
-        super().__init__(name) # Create the node
-        # Initialiaze node variables
+        super().__init__(name, timerFreq) # Create the node
+
+        # Initialize node variables
         self._low = np.array([60-25, 50, 50])
         self._high = np.array([65+25, 255, 255])
         self._kernel = np.ones((5, 5), np.uint8)
 
         self._color_info = (0, 0, 255)
 
-        # Initialize subscribers
-        self.create_subscription(Image, 'cam_rgb', self.rgb_callback, 10)
-        self.create_subscription(Float32MultiArray, 'cam_depth_dist', self.depth_callback, 10)
+        # Initialize a ROS2 Image to CV2 image converter
+        self._bridge = CvBridge()
 
-        # Initialize subcriber variables
-        self._rgb_img = None
-        self._depth_img = None
-
+    def init_publishers(self, timerFreq: float):
         # Initialize publishers
         self._rgb_detection_publisher = self.create_publisher(Image, 'rgb_detection', 10)
         self._mask_detection_publisher = self.create_publisher(Image, 'mask_detection', 10)
@@ -36,21 +37,7 @@ class CameraVision(Node):
 
         # Initialize a clock for the publisher
         self.create_timer(timerFreq, self.loop)
-
-        # Initialize a ROS2 Image to CV2 image converter
-        self._bridge = CvBridge()
-
-    # Callbacks
-    def rgb_callback(self, img):
-        print('coucou')
-        self._rgb_img = self._bridge.imgmsg_to_cv2(img, desired_encoding='passthrough')
-    
-    def depth_callback(self, img):
-        width = img.dim[0].size
-        height = img.dim[1].size
-        self._depth_img = np.array(img.data).reshape((width, height))
-        
-
+            
 
     def publish_msgs(self, image, mask):
         # Convert cv2 images to ROS2 RGB Image20
@@ -79,12 +66,17 @@ class CameraVision(Node):
         
     # Node internal loop
     def loop(self):
-        if self._rgb_img is None :
-            print('a')
+        """
+        Main loop to call
+        """
+        # update images
+        if self._update_imgs() is None :
             return
+
+        color_image = np.asanyarray(self._color_frame.get_data())
         
         # Convert image to HSV for easier thresholding
-        image = cv2.cvtColor(self._rgb_img, cv2.COLOR_BGR2HSV)
+        image = cv2.cvtColor(color_image, cv2.COLOR_BGR2HSV)
 
         # Seuillage par colorimétrie
         mask = cv2.inRange(image, self._low, self._high)
@@ -114,7 +106,7 @@ class CameraVision(Node):
 
         findPt = False
         (x, y) = 0, 0
-        for c in contours:
+        for c in sorted_contours:
         
             # Compare our mask with our templates
             match = cv2.matchShapes(template_contour, c, 3, 0.0)
@@ -124,7 +116,7 @@ class CameraVision(Node):
             (x, y), radius = cv2.minEnclosingCircle(c)
 
             # If we find a correct match that is big enough, we publish data
-            if min(match, match2) < 0.3 and radius > 30 and y > 2.0/5 * 480:
+            if min(match, match2) < 0.3 and radius > 30:
                 findPt = True
 
                 break # Stop checking other contours
@@ -139,23 +131,19 @@ class CameraVision(Node):
             # Publish images and string message
             self.publish_msgs(image, mask)
         
-        # Depth Program
-        if self._depth_img is None :
-            return
-        depth = self._depth_img
-        print(depth[int(y), int(x)])
-
-        """
-        if findPt:
+            # Depth calculus
+            x,y = int(x), int(y)
+            color_intrin = self._color_frame.profile.as_video_stream_profile().intrinsics
             circle_points = []
             D_RADIUS = 10
-            for X in range(int(x)-D_RADIUS, int(x)+D_RADIUS):
-                for Y in range(int(y)-D_RADIUS, int(y)+D_RADIUS):
-                    if (X-int(x))**2 + (Y-int(y))**2 <= D_RADIUS:
-                        circle_points.append(depth[Y, X])
+            for X in range(x-D_RADIUS, x+D_RADIUS):
+                for Y in range(y-D_RADIUS, y+D_RADIUS):
+                    if (X-x)**2 + (Y-y)**2 <= D_RADIUS:
+                        depth = self._depth_dist_frame.get_distance(x, y)
+                        dx ,dy, dz = rs.rs2_deproject_pixel_to_point(color_intrin, [x, y], depth)
+                        circle_points.append(math.sqrt(dx**2 + dy**2 + dz**2))
             #publier moy(circle_points)
             print(statistics.mean(circle_points))
-        """
         
         
 

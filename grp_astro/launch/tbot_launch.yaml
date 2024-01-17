@@ -20,12 +20,6 @@ launch:
         from: '/cmd_vel'
         to: '/multi/cmd_nav'
 
-# Publish camera views
-- node:
-    pkg: "grp_astro"
-    exec: "cam_driver"
-    name: "cam_driver"
-
 # Publish if there is a bottle in the field of view
 - node:
     pkg: "grp_astro"
