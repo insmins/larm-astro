@@ -3,6 +3,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from std_msgs.msg import String, Float32MultiArray
+from geometry_msgs.msg import Point
 import  numpy as np
 import cv2, pathlib, statistics
 from cv_bridge import CvBridge
@@ -33,13 +34,13 @@ class CameraVision(CameraDriver):
         self._rgb_detection_publisher = self.create_publisher(Image, 'rgb_detection', 10)
         self._mask_detection_publisher = self.create_publisher(Image, 'mask_detection', 10)
         self._detection_publisher = self.create_publisher(String, 'detection', 10)
-        #self._depth_point_publisher = self.create_publisher(String, 'depth_point', 10)
+        self._bottle_relative_pos_publisher = self.create_publisher(Point, 'bottle_relative_pos', 10)
 
         # Initialize a clock for the publisher
         self.create_timer(timerFreq, self.loop)
             
 
-    def publish_msgs(self, image, mask):
+    def publish_msgs(self, image, mask, xDist, yDist):
         # Convert cv2 images to ROS2 RGB Image20
         ros2_mask_image = cv2.cvtColor(mask, cv2.COLOR_GRAY2RGB)
         ros2_mask_image = cv2.cvtColor(ros2_mask_image, cv2.COLOR_RGB2BGR)
@@ -62,7 +63,10 @@ class CameraVision(CameraDriver):
         self._mask_detection_publisher.publish(ros2_mask_image)
 
         # Depth publish
-        #self._depth_point_publisher.publish(ros2_mask_image)
+        relative_position = Point()
+        relative_position.x = xDist
+        relative_position.y = yDist
+        self._bottle_relative_pos_publisher.publish(relative_position)
         
     # Node internal loop
     def loop(self):
@@ -128,28 +132,39 @@ class CameraVision(CameraDriver):
             cv2.circle(image, (int(x), int(y)), int(radius), self._color_info, 2)
             cv2.circle(image, (int(x), int(y)), 5, self._color_info, 10)
 
-            # Publish images and string message
-            self.publish_msgs(image, mask)
         
-            # Depth calculus
             x,y = int(x), int(y)
-            color_intrin = self._color_frame.profile.as_video_stream_profile().intrinsics
-            circle_points = []
-            D_RADIUS = 10
-            for X in range(x-D_RADIUS, x+D_RADIUS):
-                for Y in range(y-D_RADIUS, y+D_RADIUS):
-                    if (X-x)**2 + (Y-y)**2 <= D_RADIUS:
-                        depth = self._depth_dist_frame.get_distance(x, y)
-                        dx ,dy, dz = rs.rs2_deproject_pixel_to_point(color_intrin, [x, y], depth)
-                        circle_points.append(math.sqrt(dx**2 + dy**2 + dz**2))
-            #publier moy(circle_points)
-            print(statistics.mean(circle_points))
+            
+            # Depth calculus            
+            xDist, yDist = self.pixelToRelativePos(x,y)
         
+            # Publish images, string and position message
+            self.publish_msgs(image, mask, xDist, yDist)
         
 
         
 
+    def pixelToRelativePos(self, x, y):
+        # Calculation of the depth value
+        color_intrin = self._color_frame.profile.as_video_stream_profile().intrinsics
+        D_RADIUS = 10
+        
+        front_dist = []
+        lateral_dist = []
+        for X in range(x-D_RADIUS, x+D_RADIUS):
+            for Y in range(y-D_RADIUS, y+D_RADIUS):
+                if (X-x)**2 + (Y-y)**2 <= D_RADIUS:
+                    depth = self._depth_dist_frame.get_distance(x, y)
+                    dx ,dy, dz = rs.rs2_deproject_pixel_to_point(color_intrin, [x, y], depth)
 
+                    # Store values for average
+                    front_dist.append(dz)
+                    lateral_dist.append(-dx)
+
+        xDist = statistics.mean(front_dist)
+        yDist = statistics.mean(lateral_dist)
+
+        return xDist, yDist
 
 
 

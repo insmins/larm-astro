@@ -46,6 +46,9 @@ class CameraDriver(Node):
         self._align = rs.align(self._align_to)
         self._color_info=(0, 0, 255)
 
+        self._cam_width = 848
+        self._cam_height = 480
+
         ## Get device product line for setting a supporting resolution
         pipeline_wrapper = rs.pipeline_wrapper(self._pipeline)
         pipeline_profile = self._config.resolve(pipeline_wrapper)
@@ -64,10 +67,10 @@ class CameraDriver(Node):
             exit(0)
 
         ## Configure stream width, height, format and frequency
-        self._config.enable_stream(rs.stream.color, width=848, height=480, format=rs.format.bgr8, framerate=60)
-        self._config.enable_stream(rs.stream.depth, width=848, height=480, format=rs.format.z16, framerate=60)
-        self._config.enable_stream(rs.stream.infrared, 1, width=848, height=480, format=rs.format.y8, framerate=60)
-        self._config.enable_stream(rs.stream.infrared, 2, width=848, height=480, format=rs.format.y8, framerate=60)
+        self._config.enable_stream(rs.stream.color, width=int(self._cam_width), height=int(self._cam_height), format=rs.format.bgr8, framerate=60)
+        self._config.enable_stream(rs.stream.depth, width=int(self._cam_width), height=int(self._cam_height), format=rs.format.z16, framerate=60)
+        self._config.enable_stream(rs.stream.infrared, 1, width=int(self._cam_width), height=int(self._cam_height), format=rs.format.y8, framerate=60)
+        self._config.enable_stream(rs.stream.infrared, 2, width=int(self._cam_width), height=int(self._cam_height), format=rs.format.y8, framerate=60)
 
         ## Start the acquisition    
         self._pipeline.start(self._config)
@@ -129,11 +132,11 @@ class CameraDriver(Node):
         val.layout.dim = [MultiArrayDimension(), MultiArrayDimension()]
         val.layout.dim[0].label = 'width'
         val.layout.dim[1].label = 'height'
-        val.layout.dim[0].size = 848
-        val.layout.dim[1].size = 480
+        val.layout.dim[0].size = self._cam_width
+        val.layout.dim[1].size = self._cam_height
         
         
-        val.data = depth_dist.reshape(480*848)
+        val.data = depth_dist.reshape(self._cam_height*self._cam_width)
         #print(depth_dist)
         self._depth_dist = val
         
