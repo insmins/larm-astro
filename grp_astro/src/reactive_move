@@ -29,8 +29,8 @@ class ReactiveMove(Node):
                 ('MIN_DIST_MOVE_FORWARD', 0.3),
                 ('MAX_DIST_MOVE_FORWARD', 0.8),
                 # Velocities
-                ('ANGULAR_VELOCITY', 1.0),
-                ('LINEAR_VELOCITY', 0.3)
+                ('ANGULAR_VELOCITY', 0.8),
+                ('LINEAR_VELOCITY', 0.2)
             ])
 
         # Initialize subscribers
