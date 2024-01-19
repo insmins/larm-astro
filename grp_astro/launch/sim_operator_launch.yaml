@@ -11,3 +11,7 @@ launch:
 # Launch a terminal that listens to the "detection" topic to print when we see a bottle in the FOV
 - executable:
     cmd: gnome-terminal --tab -e 'ros2 topic echo "detection"'
+
+# Launch teleop
+- executable:
+    cmd: gnome-terminal --tab -e 'ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args --remap cmd_vel:=/multi/cmd_teleop'
