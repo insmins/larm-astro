@@ -112,7 +112,7 @@ class ReactiveMove(Node):
         # Default case
         x, y = firstPointInFront(self._points, self.paramDouble('RECT_LENGTH'), self.paramDouble('RECT_WIDTH') / 2.0)
 
-        if(not self._firstPointSeen): #If you were previously moving straight without obstacles
+        if not(self._firstPointSeen) and x and y: #If you were previously moving straight without obstacles
             self._firstPointSeen = (x,y)
 
         velocity = Twist()
@@ -123,6 +123,10 @@ class ReactiveMove(Node):
                 velocity.linear.x = 0.0 #If the wall is too close, don't go forward, only rotate
             else:
                 coefficient = (x - self.paramDouble('MIN_DIST_MOVE_FORWARD')) / (self.paramDouble('MAX_DIST_MOVE_FORWARD') - self.paramDouble('MIN_DIST_MOVE_FORWARD')) #linear between 0 (MIN_DIST_MOVE_FORWARD) and 1 (MAX_DIST_MOVE_FORWARD)
+                if coefficient > 1:
+                    coefficient = 1
+                elif coefficient < 0:
+                    coefficient = 0
                 velocity.linear.x = coefficient * self.paramDouble('LINEAR_VELOCITY')
 
             # Rotation, based on the first point seen
