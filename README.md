@@ -65,6 +65,22 @@ export ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET #Tell ROS to make your nodes only ac
 1. Clone this repository : `git clone http://gvipers.imt-nord-europe.fr/ines.el.hadri/larm.git`
 
 
+### Tune the camera HSV
+
+First, put a bottle in front of the robot.
+
+Then, go in the `larm` directory and launch the HSV tuner python script using the following command
+```
+python3 src/config/mask_tuner.py
+```
+
+A window will popup with a frame from the RealSense camera :
+- Make a rectangle selection of the inside of the bottle (every pixel in the rectangle should be green, make the biggest rectangle possible to have a lot of diversity in the green colors).
+- Then press enter to save the selection and calculate the HSV thresholds
+- If the mask seems good enough, press a key. Otherwise, press a key and restart the script
+
+> Every time you run the tuner script, you will have to rebuild the package (see [Build the package](#build-the-packages))
+
 ### Build the packages
 In the same ROS2 workspace directory:
 - `./master/bin/install`

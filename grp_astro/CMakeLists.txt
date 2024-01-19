@@ -42,6 +42,11 @@ install(DIRECTORY
   src/img
   DESTINATION lib/${PROJECT_NAME}
 )
+# Copy HSV tuning
+install(DIRECTORY
+  src/config
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 # Python scripts
 install( PROGRAMS 

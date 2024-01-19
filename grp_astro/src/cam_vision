@@ -9,7 +9,6 @@ import cv2, pathlib, statistics
 from cv_bridge import CvBridge
 from cam_driver import CameraDriver
 import pyrealsense2 as rs
-import math
 
 
 
@@ -19,11 +18,30 @@ class CameraVision(CameraDriver):
     def __init__(self, name="cam_vision", timerFreq = 1/60.0):
         super().__init__(name, timerFreq) # Create the node
 
-        # Initialize node variables
-        self._low = np.array([60-25, 50, 50])
-        self._high = np.array([65+25, 255, 255])
-        self._kernel = np.ones((5, 5), np.uint8)
+        # Load parameters
+        directory = pathlib.PurePath(__file__).parent
+        try:
+            # Load HSV threshold params from file
+            file = open(str(directory / "config" / "hsv_params" ), "r")
 
+            # Parse string
+            text = file.read()
+            low = text.split(",")[0].strip('][ ')
+            high = text.split(",")[1].strip('][ ')
+
+            self._low = np.array([int(i) for i in low.split(" ") if i])
+            self._high = np.array([int(i) for i in high.split(" ") if i])
+
+            print(f"Successfully loaded HSV params :\n - low : {self._low}\n - high {self._high}")
+        except:
+            # Initialize default variables if no file exists
+            self._low = np.array([60-25, 50, 50])
+            self._high = np.array([65+25, 255, 255])
+
+            print("Set HSV params to default values :\n - low : {self._low}\n - high {self._high}")
+        
+        # Node variables
+        self._kernel = np.ones((5, 5), np.uint8)
         self._color_info = (0, 0, 255)
 
         # Initialize a ROS2 Image to CV2 image converter
