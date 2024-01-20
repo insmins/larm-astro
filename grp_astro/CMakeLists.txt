@@ -54,6 +54,7 @@ install( PROGRAMS
   src/cam_vision
   src/reactive_move
   src/scan2point_cloud
+  src/bottle_mapping
 
   DESTINATION lib/${PROJECT_NAME}
 )

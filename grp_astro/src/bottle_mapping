@@ -1,0 +1,173 @@
+#!/usr/bin/python3
+"""Receive camera detections and depth and plot them on the map"""
+
+# imports
+import rclpy
+import math as m, numpy as np
+from rclpy.node import Node
+from geometry_msgs.msg import Point
+from visualization_msgs.msg import Marker
+from geometry_msgs.msg import Pose
+from nav_msgs.msg import Odometry
+from tf2_ros.transform_listener import TransformListener
+from tf2_ros.buffer import Buffer
+
+# main class
+class BottleMapping(Node):
+    
+    def __init__(self, name="bottle_mapping"):
+        """ constructor """
+        super().__init__(name)  # Create the node
+
+        # Initialize parameters
+        self.declare_parameters(
+            namespace='',
+            parameters=[
+                ('MIN_DIST_FOR_NEW_POINT', 0.3)
+            ])
+
+        self.create_subscription(Point, '/bottle_relative_pos', self.bottle_pos_callback, 10)
+        # Initialize subscribers
+        self.create_subscription(Odometry, '/odom', self.odom_callback, 10)
+
+        # Initialize a publisher
+        self._marker_publisher = self.create_publisher(Marker, '/bottle_marker', 10)
+
+
+        # Initialize variables
+        self._markers = []
+        self._robotPose = None
+        self._camPose = None
+
+        self._tf_buffer = Buffer()
+        self._tf_listener = TransformListener(self._tf_buffer, self)
+
+        # Reset previous markers (not working)
+        marker = Marker()
+        marker.header.frame_id = 'map'
+        marker.action = Marker.DELETEALL
+        self.publish_marker(marker)
+
+    def odom_callback(self, odom):
+        """
+        Get robot pose on the map, thanks to SLAM
+        """
+        self._robotPose = odom.pose.pose
+
+    def bottle_pos_callback(self, bottleOffsetToCam):
+        """
+        Calculate pos in map and decide if it's a new bottle
+        """
+
+        if not self._robotPose:
+            return
+        
+
+        # Add camera offset
+        bottleOffsetToRobot = bottleOffsetToCam
+        trans = self._tf_buffer.lookup_transform("base_link", "camera_link", rclpy.time.Time())
+        camOffset = m.sqrt(trans.transform.translation.x ** 2 + trans.transform.translation.y ** 2)
+        bottleOffsetToRobot.x += camOffset
+
+
+        # Get bottle coordinates relative to map
+        newPose = Pose()
+        newPose.position = self._robotPose.position
+
+        yaw = self.getRobotRotation()
+
+        newPose.position.x += bottleOffsetToRobot.x * m.cos(yaw) - bottleOffsetToRobot.y * m.sin(yaw)
+        newPose.position.y += bottleOffsetToRobot.x * m.sin(yaw) + bottleOffsetToRobot.y * m.cos(yaw)
+
+        newPosition = newPose.position
+
+        # Compare it with other markers
+        isNewPoint = True
+        for marker in self._markers:
+            markerPosition = marker.pose.position
+            distance = m.sqrt((newPosition.x - markerPosition.x)**2 + (newPosition.y - markerPosition.y)**2)
+            if(distance < self.paramDouble("MIN_DIST_FOR_NEW_POINT")):
+                isNewPoint = False
+
+
+        if not isNewPoint: #If too close to other points, probably the same bottle
+            return
+    
+
+        # Create Marker
+        marker = self.createMarker(newPose)
+        # Add marker to list
+        self._markers.append(marker)
+        # Publish marker
+        self.publish_marker(marker)
+
+    def createMarker(self, pose):
+        marker = Marker()
+
+        # Define header
+        marker.header.frame_id = "map"
+        marker.header.stamp = self.get_clock().now().to_msg()
+        
+        # Define marker type
+        marker.type = Marker.CYLINDER
+        marker.action = Marker.ADD
+
+        # Set id to the number of detected bottles, and show it as the name of the marker
+        marker.id = len(self._markers)
+        marker.ns = "bottles"
+        marker.text = "bottle_" + str(marker.id)
+
+        # Set marker color
+        marker.color.r = 0.0
+        marker.color.g = 1.0
+        marker.color.b = 0.0
+        marker.color.a = 1.0
+
+        # Set marker scale
+        marker.scale.x = 0.1
+        marker.scale.y = 0.1
+        marker.scale.z = 0.1
+
+        # Set marker pose
+        marker.pose = pose
+
+        return marker
+
+    def publish_marker(self, marker):
+        """ 
+        Publish bottle marker
+        """
+        self._marker_publisher.publish(marker)
+
+    def getRobotRotation(self):
+        # Convert robot quaternion to roll
+        x = self._robotPose.orientation.x
+        y = self._robotPose.orientation.y
+        z = self._robotPose.orientation.z
+        w = self._robotPose.orientation.w
+
+        siny_cosp = 2 * (w * z + x * y)
+        cosy_cosp = 1 - 2 * (y * y + z * z)
+        yaw = np.arctan2(siny_cosp, cosy_cosp)
+
+        return yaw
+
+    def paramDouble(self, name):
+        return self.get_parameter(name).get_parameter_value().double_value
+
+
+# Main loop
+def main():
+    """
+    Main loop
+    """
+    rclpy.init()
+    rosNode = BottleMapping()
+    rclpy.spin(rosNode)
+
+
+    rosNode.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == "__main__":
+    main()
