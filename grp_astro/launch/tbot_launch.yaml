@@ -23,7 +23,7 @@ launch:
 # Publish if there is a bottle in the field of view
 - node:
     pkg: "grp_astro"
-    exec: "cam_vision"
+    exec: "cam_vision.py"
     name: "cam_vision"
 
 # Launch a SLAM algorithm

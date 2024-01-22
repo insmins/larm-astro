@@ -51,7 +51,7 @@ install(DIRECTORY
 # Python scripts
 install( PROGRAMS 
   src/cam_driver.py
-  src/cam_vision
+  src/cam_vision.py
   src/reactive_move
   src/scan2point_cloud
   src/bottle_mapping

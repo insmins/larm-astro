@@ -11,11 +11,12 @@ from cv_bridge import CvBridge
 
 class CameraDriver(Node):
 
-    def __init__(self, name="cam_driver", timerFreq = 1/60.0):
-        super().__init__(name) # Create the node
+    def __init__(self, name="cam_driver", timerFreq = 1/60.0, isRos = True):
+        if isRos:
+            super().__init__(name) # Create the node
 
-        # Initialize publishers:
-        self.init_publishers(timerFreq)
+            # Initialize publishers:
+            self.init_publishers(timerFreq)
 
         # Initialize camera
         self._init_camera()

@@ -15,37 +15,40 @@ import pyrealsense2 as rs
 class CameraVision(CameraDriver):
     
 
-    def __init__(self, name="cam_vision", timerFreq = 1/60.0):
-        super().__init__(name, timerFreq) # Create the node
+    def __init__(self, name="cam_vision", timerFreq = 1/60.0, isRos = True):
+        super().__init__(name, timerFreq, isRos) # Create the node
 
-        # Load parameters
-        directory = pathlib.PurePath(__file__).parent
-        try:
-            # Load HSV threshold params from file
-            file = open(str(directory / "config" / "hsv_params" ), "r")
 
-            # Parse string
-            text = file.read()
-            low = text.split(",")[0].strip('][ ')
-            high = text.split(",")[1].strip('][ ')
+        if isRos:
+            # Load parameters
+            directory = pathlib.PurePath(__file__).parent
+            try:
+                # Load HSV threshold params from file
+                file = open(str(directory / "config" / "hsv_params" ), "r")
 
-            self._low = np.array([int(i) for i in low.split(" ") if i])
-            self._high = np.array([int(i) for i in high.split(" ") if i])
+                # Parse string
+                text = file.read()
+                low = text.split(",")[0].strip('][ ')
+                high = text.split(",")[1].strip('][ ')
 
-            print(f"Successfully loaded HSV params :\n - low : {self._low}\n - high {self._high}")
-        except:
-            # Initialize default variables if no file exists
-            self._low = np.array([60-25, 50, 50])
-            self._high = np.array([65+25, 255, 255])
+                self._low = np.array([int(i) for i in low.split(" ") if i])
+                self._high = np.array([int(i) for i in high.split(" ") if i])
 
-            print("Set HSV params to default values :\n - low : {self._low}\n - high {self._high}")
+                print(f"Successfully loaded HSV params :\n - low : {self._low}\n - high {self._high}")
+            except:
+                # Initialize default variables if no file exists
+                self._low = np.array([60-25, 50, 50])
+                self._high = np.array([65+25, 255, 255])
 
-        # Node parameters
-        self.declare_parameters(
-            namespace='',
-            parameters=[
-                ('DEPTH_CHECK_RADIUS', 10)
-            ])
+                print("Set HSV params to default values :\n - low : {self._low}\n - high {self._high}")
+
+
+            # Node parameters
+            self.declare_parameters(
+                namespace='',
+                parameters=[
+                    ('DEPTH_CHECK_RADIUS', 10)
+                ])
 
         
         # Node variables
@@ -109,6 +112,16 @@ class CameraVision(CameraDriver):
         self._bottle_relative_pos_publisher.publish(relative_position)
         
 
+    def maskImage(self, hsv_img):
+
+        # Seuillage par colorimétrie
+        mask = cv2.inRange(hsv_img, self._low, self._high)
+
+        # Réduction du bruit
+        mask = cv2.erode(mask, self._kernel, iterations=4)
+        mask = cv2.dilate(mask, self._kernel, iterations=4)
+
+        return mask
 
     # Node internal loop
     def loop(self):
@@ -124,12 +137,8 @@ class CameraVision(CameraDriver):
         # Convert image to HSV for easier thresholding
         image = cv2.cvtColor(color_image, cv2.COLOR_BGR2HSV)
 
-        # Seuillage par colorimétrie
-        mask = cv2.inRange(image, self._low, self._high)
-
-        # Réduction du bruit
-        mask = cv2.erode(mask, self._kernel, iterations=4)
-        mask = cv2.dilate(mask, self._kernel, iterations=4)
+        # Create a mask based on HSV threshold, noise reduction
+        mask = self.maskImage(image)
 
 
         # Segmentation using shape matching
