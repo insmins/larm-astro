@@ -39,6 +39,14 @@ class CameraVision(CameraDriver):
             self._high = np.array([65+25, 255, 255])
 
             print("Set HSV params to default values :\n - low : {self._low}\n - high {self._high}")
+
+        # Node parameters
+        self.declare_parameters(
+            namespace='',
+            parameters=[
+                ('DEPTH_CHECK_RADIUS', 10)
+            ])
+
         
         # Node variables
         self._kernel = np.ones((5, 5), np.uint8)
@@ -165,7 +173,7 @@ class CameraVision(CameraDriver):
     def pixelToRelativePos(self, x, y):
         # Calculation of the depth value
         color_intrin = self._color_frame.profile.as_video_stream_profile().intrinsics
-        D_RADIUS = 10
+        D_RADIUS = self.paramInt('DEPTH_CHECK_RADIUS')
         
         front_dist = []
         lateral_dist = []
@@ -183,7 +191,10 @@ class CameraVision(CameraDriver):
         yDist = statistics.mean(lateral_dist)
 
         return xDist, yDist
-
+   
+   
+    def paramInt(self, name):
+        return self.get_parameter(name).get_parameter_value().integer_value
 
 
     
