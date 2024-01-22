@@ -78,9 +78,9 @@ cv2.destroyWindow('Select region')
 H = selectedRegion[:,:,0].flatten()
 S = selectedRegion[:,:,1].flatten()
 V = selectedRegion[:,:,2].flatten()
-hMargin = 15
-sMargin = 20
-vMargin = 20
+hMargin = 13
+sMargin = 10
+vMargin = 10
 
 low = np.array([min(H) - hMargin, min(S) - sMargin, min(V) - vMargin])
 high = np.array([max(H) + hMargin, max(S) + sMargin, max(V) + vMargin])
