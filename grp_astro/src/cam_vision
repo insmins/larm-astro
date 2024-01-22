@@ -52,6 +52,9 @@ class CameraVision(CameraDriver):
         self._kernel = np.ones((5, 5), np.uint8)
         self._color_info = (0, 0, 255)
 
+        self._rgb_detection = None
+        self._mask_detection = None
+
         # Initialize a ROS2 Image to CV2 image converter
         self._bridge = CvBridge()
 
