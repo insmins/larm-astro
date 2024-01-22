@@ -1,0 +1,87 @@
+#!/usr/bin/python3
+
+# Imports
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import PoseStamped, Twist
+from nav_msgs.msg import OccupancyGrid
+
+from random import random, sample
+
+# Class
+
+class AutoDisco(Node):
+    def __init__(self, name="auto_disco", timerFreq=1.0/60):
+        super().__init__(name)
+
+        self.init_publishers(timerFreq)
+        self.init_subscribers()
+
+        self._robot_speed = Twist()
+        self._map = None
+    
+    def init_publishers(self, timerFreq):
+        self._goal_publisher = self.create_publisher(PoseStamped, 'goal_pose', 10)
+        self.create_timer(timerFreq, self.loop)
+    
+    def init_subscribers(self):
+        self.create_subscription(Twist, '/cmd_vel', self.scan_callback, 10)
+        self.create_subscription(OccupancyGrid, '/map', self.map_callback, 10)
+
+    def scan_callback(self, msg):
+        self._robot_speed = msg
+
+    def map_callback(self, msg):
+        self._map = msg
+
+    def loop(self):        
+        print(f'{self._robot_speed.linear.x=}')
+        if self._robot_speed == Twist():
+            rdx, rdy = random(), random()
+            pose = PoseStamped()
+
+            # Map view
+            if self._map is None:
+                return
+            
+            resolution = self._map.info.resolution
+            width = self._map.info.width
+            height = self._map.info.height
+            pose_origin = self._map.info.origin
+
+            data = self._map.data
+            print(type(data))
+
+            values = []
+
+
+            for x in range(width):
+                for y in range(height):
+                    if data[x+y*width] == -1:
+                        values.append((x, y))
+
+            values = sample(values, 1)
+
+            pose.pose.position.x = values[0][0]*resolution
+            pose.pose.position.y = values[0][1]*resolution
+            print(f'{pose.pose.position.x=}\n{pose.pose.position.y=}')
+
+            pose.header.frame_id = "map"
+            pose.header.stamp = self.get_clock().now().to_msg()
+
+            self._goal_publisher.publish(pose) 
+
+def main():
+    """
+    Main loop
+    """
+    rclpy.init()
+    rosNode = AutoDisco()
+    rclpy.spin(rosNode)
+
+
+    rosNode.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == "__main__":
+    main()
