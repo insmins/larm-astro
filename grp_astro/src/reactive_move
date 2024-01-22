@@ -24,13 +24,13 @@ class ReactiveMove(Node):
             parameters=[
                 # Rectangle of vision of the robot
                 ('RECT_WIDTH', 0.6),
-                ('RECT_LENGTH', 0.8),
+                ('RECT_LENGTH', 0.6),
                 # Rectangle of speeds of the robot
                 ('MIN_DIST_MOVE_FORWARD', 0.3),
-                ('MAX_DIST_MOVE_FORWARD', 0.8),
+                ('MAX_DIST_MOVE_FORWARD', 0.6),
                 # Velocities
                 ('ANGULAR_VELOCITY', 0.8),
-                ('LINEAR_VELOCITY', 0.2)
+                ('LINEAR_VELOCITY', 0.25)
             ])
 
         # Initialize subscribers
