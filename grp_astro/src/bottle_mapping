@@ -70,16 +70,30 @@ class BottleMapping(Node):
         bottleOffsetToRobot.x += camOffset
 
 
-        # Get bottle coordinates relative to map
-        newPose = Pose()
-        newPose.position = self._robotPose.position
+        # Get bottle coordinates relative to Odom
+        newPoseInOdom = Pose()
+        newPoseInOdom.position = self._robotPose.position
+        a = Odometry()
 
-        yaw = self.getRobotRotation()
+        yaw = self.quaternionToYaw(self._robotPose.orientation)
 
-        newPose.position.x += bottleOffsetToRobot.x * m.cos(yaw) - bottleOffsetToRobot.y * m.sin(yaw)
-        newPose.position.y += bottleOffsetToRobot.x * m.sin(yaw) + bottleOffsetToRobot.y * m.cos(yaw)
+        newPoseInOdom.position.x += bottleOffsetToRobot.x * m.cos(yaw) - bottleOffsetToRobot.y * m.sin(yaw)
+        newPoseInOdom.position.y += bottleOffsetToRobot.x * m.sin(yaw) + bottleOffsetToRobot.y * m.cos(yaw)
 
-        newPosition = newPose.position
+        # Add offset to map
+        trans = self._tf_buffer.lookup_transform("map", "odom", rclpy.time.Time())
+
+        newPoseInMap = Pose()
+        newPoseInMap.position.x = trans.transform.translation.x
+        newPoseInMap.position.y = trans.transform.translation.y
+        newPoseInMap.position.z = trans.transform.translation.z
+        
+        yaw = self.quaternionToYaw(trans.transform.rotation)
+        newPoseInMap.position.x += newPoseInOdom.position.x * m.cos(yaw) - newPoseInOdom.position.y * m.sin(yaw)
+        newPoseInMap.position.y += newPoseInOdom.position.x * m.sin(yaw) + newPoseInOdom.position.y * m.cos(yaw)
+
+
+        newPosition = newPoseInMap.position
 
         # Compare it with other markers
         isNewPoint = True
@@ -95,7 +109,7 @@ class BottleMapping(Node):
     
 
         # Create Marker
-        marker = self.createMarker(newPose)
+        marker = self.createMarker(newPoseInMap)
         # Add marker to list
         self._markers.append(marker)
         # Publish marker
@@ -139,12 +153,12 @@ class BottleMapping(Node):
         """
         self._marker_publisher.publish(marker)
 
-    def getRobotRotation(self):
-        # Convert robot quaternion to roll
-        x = self._robotPose.orientation.x
-        y = self._robotPose.orientation.y
-        z = self._robotPose.orientation.z
-        w = self._robotPose.orientation.w
+    def quaternionToYaw(self, q):
+        # Convert quaternion to yaw
+        x = q.x
+        y = q.y
+        z = q.z
+        w = q.w
 
         siny_cosp = 2 * (w * z + x * y)
         cosy_cosp = 1 - 2 * (y * y + z * z)
