@@ -64,29 +64,40 @@ class CameraVision(CameraDriver):
 
         # Initialize a clock for the publisher
         self.create_timer(timerFreq, self.loop)
+        self.create_timer(1, self.publish_imgs) # Limit the publishing of images to 1 each second (to prevent network issues)
             
+    def publish_imgs(self):
+        if self._rgb_detection is None or self._mask_detection is None:
+            return
 
-    def publish_msgs(self, image, mask, xDist, yDist):
-        # Convert cv2 images to ROS2 RGB Image20
-        ros2_mask_image = cv2.cvtColor(mask, cv2.COLOR_GRAY2RGB)
+        # Convert cv2 images to ROS2 RGB Image
+        ros2_mask_image = cv2.cvtColor(self._mask_detection, cv2.COLOR_GRAY2RGB)
         ros2_mask_image = cv2.cvtColor(ros2_mask_image, cv2.COLOR_RGB2BGR)
         ros2_mask_image = self._bridge.cv2_to_imgmsg(ros2_mask_image,"bgr8")
         ros2_mask_image.header.stamp = self.get_clock().now().to_msg()
         ros2_mask_image.header.frame_id = "image"
 
-        ros2_rgb_image = cv2.cvtColor(image, cv2.COLOR_HSV2BGR)
+        ros2_rgb_image = cv2.cvtColor(self._rgb_detection, cv2.COLOR_HSV2BGR)
         ros2_rgb_image = self._bridge.cv2_to_imgmsg(ros2_rgb_image,"bgr8")
         ros2_rgb_image.header.stamp = self.get_clock().now().to_msg()
         ros2_rgb_image.header.frame_id = "image"
 
+        # Publish Images -> to be able to detect false positives and improve the algorithm
+        self._rgb_detection_publisher.publish(ros2_rgb_image)
+        self._mask_detection_publisher.publish(ros2_mask_image)
+
+
+        # Reset images
+        self._rgb_detection = None
+        self._mask_detection = None
+
+
+    def publish_data(self, xDist, yDist):
 
         # Publish String message -> to inform that we have detected a bottle
         str = String()
         str.data = "A bottle has been detected"
         self._detection_publisher.publish(str)
-        # Publish Images -> to be able to detect false positives and improve the algorithm
-        self._rgb_detection_publisher.publish(ros2_rgb_image)
-        self._mask_detection_publisher.publish(ros2_mask_image)
 
         # Depth publish
         relative_position = Point()
@@ -94,6 +105,8 @@ class CameraVision(CameraDriver):
         relative_position.y = yDist
         self._bottle_relative_pos_publisher.publish(relative_position)
         
+
+
     # Node internal loop
     def loop(self):
         """
@@ -158,17 +171,19 @@ class CameraVision(CameraDriver):
             cv2.circle(image, (int(x), int(y)), int(radius), self._color_info, 2)
             cv2.circle(image, (int(x), int(y)), 5, self._color_info, 10)
 
+            # Store images for publishing
+            self._rgb_detection = image
+            self._mask_detection = mask
         
             x,y = int(x), int(y)
             
             # Depth calculus            
             xDist, yDist = self.pixelToRelativePos(x,y)
         
-            # Publish images, string and position message
-            self.publish_msgs(image, mask, xDist, yDist)
+            # Publish string and position message
+            self.publish_data(xDist, yDist)
         
 
-        
 
     def pixelToRelativePos(self, x, y):
         # Calculation of the depth value
@@ -205,7 +220,7 @@ def main():
     Main loop
     """
     rclpy.init()
-    rosNode = CameraVision(timerFreq=1.0/120)
+    rosNode = CameraVision(timerFreq=1.0/60)
     rclpy.spin(rosNode)
 
 
