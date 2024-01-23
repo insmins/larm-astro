@@ -60,11 +60,13 @@ The goal is to explore a closed area (i.e. an area bounded with obstacles) with 
 > All other data is still being processed when the robot is in pause
 - The robot **stops when you lift it** (i.e. the wheels are "falling"). It you put the robot back on the ground, movement will continue.
 
+In the [`auto_discovery` branch](https://gvipers.imt-nord-europe.fr/ines.el.hadri/larm/tree/auto_disco), you'll also find a node that **automates the map discovery** (by sending goal poses to unknown areas for the robot to go to)
 
 ## Installation
 ### Requirements
 Before starting, please ensure you have installed the following
 - ROS2 Iron : https://docs.ros.org/en/iron/index.html
+- ROS2 packages : `apt install ros-iron-slam-toolbox ros-iron-nav2-bringup`
 - Python 3.10 : https://www.python.org/downloads/
 - Python packages :
     * math, os, signal, sys, time (installed with python)
@@ -79,7 +81,7 @@ Before starting, please ensure you have installed the following
 > Command :  
 > `pip install numpy colcon-common-extensions opencv-python pyrealsense2 cvbridge3 scikit-image`
 
-- $`\textcolor{red}{\text{[OPTIONAL]}}`$ Gazebo (for the simulation)
+- $`\textcolor{red}{\text{[OPTIONAL]}}`$ Gazebo (for the simulation) (`apt install ros-iron-gazebo-ros-pkgs`)
 -  $`\textcolor{red}{\text{[OPTIONAL]}}`$ Teleop twist keyboard (to control manually the robot)
 
 ### Configuration
@@ -101,7 +103,7 @@ export ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET #Tell ROS to make your nodes accessi
 
 ### Install the package
 1. Open the command prompt in the ROS2 workspace directory
-1. Clone the IMT Tbot packages : `git clone https://bitbucket.org/imt-mobisyst/pkg-tbot/src/master/`
+1. Clone the IMT Tbot packages : `git clone https://bitbucket.org/imt-mobisyst/pkg-tbot.git` and `git clone https://bitbucket.org/imt-mobisyst/pkg-tsim.git`
 1. Clone this repository : `git clone http://gvipers.imt-nord-europe.fr/ines.el.hadri/larm.git`
 
 
@@ -125,7 +127,7 @@ A window will popup with a frame from the RealSense camera :
 
 ### Build the packages
 In the same ROS2 workspace directory:
-- `./master/bin/install`
+- `./pkg-tbot/bin/install`
 - `colcon build`
 - `source install/setup.sh`
 
