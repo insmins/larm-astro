@@ -55,6 +55,7 @@ install( PROGRAMS
   src/reactive_move
   src/scan2point_cloud
   src/bottle_mapping
+  src/auto_discovery
 
   DESTINATION lib/${PROJECT_NAME}
 )

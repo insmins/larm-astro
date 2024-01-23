@@ -3,10 +3,14 @@
 # Imports
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped, Twist
+from geometry_msgs.msg import PoseStamped, Twist, Pose
 from nav_msgs.msg import OccupancyGrid
+from nav_msgs.msg import Odometry
+from tf2_ros.transform_listener import TransformListener
+from tf2_ros.buffer import Buffer
 
 from random import random, sample
+import math as m, numpy as np
 
 # Class
 
@@ -14,62 +18,143 @@ class AutoDisco(Node):
     def __init__(self, name="auto_disco", timerFreq=1.0/60):
         super().__init__(name)
 
+        # Initialiaze subscribers / publishers
         self.init_publishers(timerFreq)
         self.init_subscribers()
 
+        # Node variables
         self._robot_speed = Twist()
         self._map = None
+        self._canPublishGoal = True
+        self._robotPose = None
+
+        # Transform frames
+        self._tf_buffer = Buffer()
+        self._tf_listener = TransformListener(self._tf_buffer, self)
     
     def init_publishers(self, timerFreq):
         self._goal_publisher = self.create_publisher(PoseStamped, 'goal_pose', 10)
         self.create_timer(timerFreq, self.loop)
     
     def init_subscribers(self):
-        self.create_subscription(Twist, '/cmd_vel', self.scan_callback, 10)
+        self.create_subscription(Twist, '/cmd_vel', self.speed_callback, 10)
         self.create_subscription(OccupancyGrid, '/map', self.map_callback, 10)
+        self.create_subscription(Odometry, '/odom', self.odom_callback, 10)
 
-    def scan_callback(self, msg):
+    def speed_callback(self, msg):
+        """
+        Get robot speed
+        """
         self._robot_speed = msg
 
     def map_callback(self, msg):
+        """
+        Get map data
+        """
         self._map = msg
 
-    def loop(self):        
-        print(f'{self._robot_speed.linear.x=}')
-        if self._robot_speed == Twist():
-            rdx, rdy = random(), random()
-            pose = PoseStamped()
+    def odom_callback(self, odom):
+        """
+        Get robot pose on the map, thanks to SLAM
+        """
+        self._robotPose = odom.pose.pose
 
-            # Map view
-            if self._map is None:
-                return
+    def loop(self):
+        # Map view
+        if self._map is None or self._robotPose is None:
+            return
             
+
+        if self._robot_speed != Twist():
+            self._canPublishGoal = True
+
+        elif self._canPublishGoal:
+            pose = PoseStamped()
+            
+            # Get map settings
             resolution = self._map.info.resolution
             width = self._map.info.width
             height = self._map.info.height
-            pose_origin = self._map.info.origin
+            origin_position = self._map.info.origin.position
 
             data = self._map.data
-            print(type(data))
 
+            # Save unknown points' coordinates
             values = []
-
-
             for x in range(width):
                 for y in range(height):
                     if data[x+y*width] == -1:
                         values.append((x, y))
 
-            values = sample(values, 1)
+            # Define a distance to check around the robot
+            xDist = int(0.5 / resolution) # 50cm in px
+            yDist = int(0.5 / resolution) # 50cm in px
 
-            pose.pose.position.x = values[0][0]*resolution
-            pose.pose.position.y = values[0][1]*resolution
-            print(f'{pose.pose.position.x=}\n{pose.pose.position.y=}')
+            # Filter the points to only get the ones without any neighbours in a square around them
+            filteredValues = [(x,y) for x,y in values if x>xDist and x < width - xDist and y>yDist and y<height-yDist]
+            pointsWithoutNeighbour = []
+            for x,y in filteredValues:
+                hasKnownNeighbour = False
+                for xOffset in range(-xDist, xDist+1):
+                    for yOffset in range(-yDist, yDist+1):
+                        if data[(x + xOffset) + (y + yOffset)*width] != -1:
+                            hasKnownNeighbour = True
+                            break
+
+                    if hasKnownNeighbour:
+                        break
+                if not hasKnownNeighbour:
+                   pointsWithoutNeighbour.append((x,y))
+
+            # Get robot position in map
+            trans = self._tf_buffer.lookup_transform("map", "odom", rclpy.time.Time())
+
+            robotX = trans.transform.translation.x
+            robotY = trans.transform.translation.y
+            
+            yaw = self.quaternionToYaw(trans.transform.rotation)
+            robotX += self._robotPose.position.x * m.cos(yaw) - self._robotPose.position.y * m.sin(yaw)
+            robotY += self._robotPose.position.x * m.sin(yaw) + self._robotPose.position.y * m.cos(yaw)
+
+
+            # Order all the points without neighbours by distance relative to the robot
+            pointsWithoutNeighbour = [(x, y, (x*resolution + origin_position.x - robotX)**2 + (y*resolution + origin_position.y - robotY)**2) for x, y in pointsWithoutNeighbour]
+            pointsWithoutNeighbour.sort(key = lambda x: x[2])
+ 
+            # If there is at least one point without neighbour, go to the closest one
+            if len(pointsWithoutNeighbour) > 0:
+                x,y,_ = pointsWithoutNeighbour[0]
+            # Otherwise if there are still unknown points, pick one of them at random
+            elif len(values) > 0:
+                x,y = sample(values, 1)[0]
+            # If all the map is known, go to a random point
+            else:
+                x,y = int(random()*width), int(random()*height)
+
+            # Transform the map coordinates into real world coordinates
+            pose.pose.position.x = x * resolution + origin_position.x
+            pose.pose.position.y = y * resolution + origin_position.y
 
             pose.header.frame_id = "map"
             pose.header.stamp = self.get_clock().now().to_msg()
 
+            # Publish goal pose
             self._goal_publisher.publish(pose) 
+
+            self._canPublishGoal = False
+
+    def quaternionToYaw(self, q):
+        # Convert quaternion to yaw
+        x = q.x
+        y = q.y
+        z = q.z
+        w = q.w
+
+        siny_cosp = 2 * (w * z + x * y)
+        cosy_cosp = 1 - 2 * (y * y + z * z)
+        yaw = np.arctan2(siny_cosp, cosy_cosp)
+
+        return yaw
 
 def main():
     """

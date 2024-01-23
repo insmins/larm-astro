@@ -1,0 +1,25 @@
+launch:
+
+# Include the challenge 1 simulation launch file
+- include:
+    file: "$(find-pkg-share tbot_sim)/launch/challenge-1.launch.py"
+
+# Lidar conversion to point cloud
+- node:
+    pkg: "grp_astro"
+    exec: "scan2point_cloud"
+    name: "scan2point_cloud"
+
+# Go to goal points
+- include:
+    file: "$(find-pkg-share nav2_bringup)/launch/navigation_launch.py"
+
+# Send goal points
+# - node:
+#     pkg: "grp_astro"
+#     exec: "auto_discovery"
+#     name: "auto_discovery"
+
+# Launch a SLAM algorithm
+- include:
+    file: "$(find-pkg-share slam_toolbox)/launch/online_sync_launch.py"
